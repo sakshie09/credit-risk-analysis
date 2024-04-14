@@ -1,17 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Apr 11 16:31:57 2024
-
-@author: saksh
-"""
-
-
 import pandas as pd
 import numpy as np
 import matplotlib as plt
 
-df = pd.read_csv("C:/Users/saksh/Downloads/my_venv/Credit_Risk_Train_Data.csv") #Reading the dataset in a dataframe using Pandas
-test_df = pd.read_csv("C:/Users/saksh/Downloads/my_venv/Credit_Risk_Validate_Data.csv") #Reading the dataset in a dataframe using Pandas
+df = pd.read_csv(".csv") #Reading the dataset in a dataframe using Pandas
+test_df = pd.read_csv(".csv") #Reading the dataset in a dataframe using Pandas
 
 df.head(10)
 df.describe() # get the summary of numerical variables
