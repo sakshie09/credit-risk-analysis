@@ -1,0 +1,290 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Apr 11 16:31:57 2024
+
+@author: saksh
+"""
+
+
+import pandas as pd
+import numpy as np
+import matplotlib as plt
+
+df = pd.read_csv("C:/Users/saksh/Downloads/my_venv/Credit_Risk_Train_Data.csv") #Reading the dataset in a dataframe using Pandas
+test_df = pd.read_csv("C:/Users/saksh/Downloads/my_venv/Credit_Risk_Validate_Data.csv") #Reading the dataset in a dataframe using Pandas
+
+df.head(10)
+df.describe() # get the summary of numerical variables
+test_df.describe()
+df['Property_Area'].value_counts()
+test_df['Property_Area'].value_counts()
+
+df['ApplicantIncome'].hist(bins=50)
+test_df['ApplicantIncome'].hist(bins=50)
+
+df.boxplot(column='ApplicantIncome')
+df.boxplot(column='ApplicantIncome', by = 'Education')
+
+df['LoanAmount'].hist(bins=50)
+test_df['LoanAmount'].hist(bins=50)
+
+df.boxplot(column='LoanAmount')
+
+temp1 = df['Credit_History'].value_counts(ascending=True)
+temp1
+
+temp2 = test_df['Credit_History'].value_counts(ascending=True)
+temp2
+
+temp3 = df.pivot_table(values='Loan_Status',index=['Credit_History'],aggfunc=lambda x: x.map({'Y':1,'N':0}).mean())
+temp3
+
+import matplotlib.pyplot as plt
+fig = plt.figure(figsize=(8,4))
+ax1 = fig.add_subplot(121)
+ax1.set_xlabel('Credit_History')
+ax1.set_ylabel('Count of Applicants')
+ax1.set_title("Applicants by Credit_History")
+temp1.plot(kind='bar')
+
+ax2 = fig.add_subplot(122)
+temp2.plot(kind = 'bar')
+ax2.set_xlabel('Credit_History')
+ax2.set_ylabel('Probability of getting loan')
+ax2.set_title("Probability of getting loan by credit history")
+
+temp3 = pd.crosstab(df['Credit_History'], df['Loan_Status'])
+temp3.plot(kind='bar', stacked=True, color=['red','blue'], grid=False)
+
+df.apply(lambda x: sum(x.isnull()),axis=0)
+test_df.apply(lambda x: sum(x.isnull()),axis=0)
+# df['LoanAmount'].fillna(df['LoanAmount'].mean(), inplace=True)
+df['Self_Employed'].value_counts()
+
+#df['Self_Employed'].fillna('No',inplace=True)
+
+from numpy.random import choice
+draw = choice(["Yes","No"], 1, p=[0.14,0.86])[0]
+df['Self_Employed'].fillna(draw,inplace=True)
+
+table = df.pivot_table(values='LoanAmount', index='Self_Employed' ,columns='Education', aggfunc=np.median)
+table
+
+def fage(x):
+    return table.loc[x['Self_Employed'],x['Education']]
+
+
+df['LoanAmount'].fillna(df[df['LoanAmount'].isnull()].apply(fage, axis=1), inplace=True)
+
+df['LoanAmount_log'] = np.log(df['LoanAmount'])
+df['LoanAmount_log'].hist(bins=20)
+
+
+df['TotalIncome'] = df['ApplicantIncome'] + df['CoapplicantIncome']
+df['TotalIncome_log'] = np.log(df['TotalIncome'])
+df['LoanAmount_log'].hist(bins=20)
+df['Loan_Amount_Term'].value_counts()
+
+df['Loan_Amount_Term'].fillna(360, inplace=True)
+df['Credit_History'].fillna(1, inplace=True)
+df['Dependents'].value_counts()
+df['Dependents'].fillna(0, inplace=True)
+
+df['Married'].value_counts()
+
+#df['Married'].fillna('Yes', inplace=True)
+#As in the self employed
+draw = choice(["Yes","No"], 1, p=[0.66,0.34])[0]
+df['Married'].fillna(draw,inplace=True)
+
+df['Gender'].value_counts()
+#df['Gender'].fillna('Male', inplace=True)
+#Save the ratio
+draw = choice(["Male","Female"], 1, p=[0.82,0.18])[0]
+
+df['Gender'].fillna(draw,inplace=True)
+
+# Building a Predictive Model in Python
+df.dtypes
+from sklearn.preprocessing import LabelEncoder
+var_mod = ['Gender','Married','Dependents','Education','Self_Employed','Property_Area','Loan_Status']
+le = LabelEncoder()
+for i in var_mod:
+    df[i] = le.fit_transform(df[i].astype(str))
+    
+df.dtypes
+
+#Import models from scikit learn module:
+from sklearn.linear_model import LogisticRegression
+from sklearn.cross_validation import KFold   #For K-fold cross validation
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, GradientBoostingClassifier
+from sklearn.tree import DecisionTreeClassifier, export_graphviz 
+from sklearn import metrics
+
+#Generic function for making a classification model and accessing performance:
+def classification_model(model, data, predictors, outcome):
+  #Fit the model:
+  model.fit(data[predictors],data[outcome])
+  
+  #Make predictions on training set:
+  predictions = model.predict(data[predictors])
+  
+  #Print accuracy
+  accuracy = metrics.accuracy_score(predictions,data[outcome])
+  print("Accuracy : %s" % "{0:.3%}".format(accuracy))
+
+  #Perform k-fold cross-validation with 5 folds
+  kf = KFold(data.shape[0], n_folds=5)
+  error = []
+  for train, test in kf:
+    # Filter training data
+    train_predictors = (data[predictors].iloc[train,:])
+    
+    # The target we're using to train the algorithm.
+    train_target = data[outcome].iloc[train]
+    
+    # Training the algorithm using the predictors and target.
+    model.fit(train_predictors, train_target)
+    
+    #Record error from each cross-validation run
+    error.append(model.score(data[predictors].iloc[test,:], data[outcome].iloc[test]))
+ 
+  print("Cross-Validation Score : %s" % "{0:.3%}".format(np.mean(error)))
+
+  #Fit the model again so that it can be refered outside the function:
+  model.fit(data[predictors],data[outcome])
+  
+#Logistic Regression
+from sklearn.model_selection import KFold
+from sklearn.linear_model import LogisticRegression
+
+# Define your classification_model function
+def classification_model(model, data, predictors, outcome):
+    # Your implementation of the classification_model function goes here
+    pass
+
+outcome_var = 'Loan_Status'
+model = LogisticRegression()
+predictor_var = ['Credit_History']
+# Instantiate KFold with the appropriate parameters
+kf = KFold(n_splits=5, random_state=None, shuffle=False)
+# Use the correct parameters when calling classification_model
+classification_model(model, df, predictor_var, outcome_var)
+predictor_var = ['Credit_History', 'Education', 'Married', 'Self_Employed', 'Property_Area']
+# Use the correct parameters when calling classification_model
+classification_model(model, df, predictor_var, outcome_var)
+#write_predict(model.predict(test_df[predictor_var]), test_df)
+
+# Decision Tree
+# In [47]:
+model = DecisionTreeClassifier()
+predictor_var = ['Credit_History','Gender','Married','Education']
+classification_model(model, df,predictor_var,outcome_var)
+
+#We can try different combination of variables:
+predictor_var = ['Credit_History','Loan_Amount_Term','LoanAmount_log']
+classification_model(model, df,predictor_var,outcome_var)
+
+# Random Forest
+from sklearn.ensemble import RandomForestClassifier
+import pandas as pd
+
+# Define your classification_model function
+def classification_model(model, data, predictors, outcome):
+    # Your implementation of the classification_model function goes here
+    pass
+
+outcome_var = 'Loan_Status'
+
+# Instantiate the RandomForestClassifier model with 100 estimators
+model = RandomForestClassifier(n_estimators=100)
+
+# Define the predictor variables
+predictor_var = ['Gender', 'Married', 'Dependents', 'Education',
+       'Self_Employed', 'Loan_Amount_Term', 'Credit_History', 'Property_Area',
+        'LoanAmount_log','TotalIncome_log']
+
+# Call fit to train the model on your data
+model.fit(df[predictor_var], df[outcome_var])
+
+# Create a series with feature importances:
+featimp = pd.Series(model.feature_importances_, index=predictor_var).sort_values(ascending=False)
+print(featimp)
+
+# Instantiate the RandomForestClassifier model with 100 estimators and min_samples_split=25
+model = RandomForestClassifier(n_estimators=100, min_samples_split=25)
+
+# Define the predictor variables
+predictor_var = ['TotalIncome_log','LoanAmount_log','Credit_History','Gender','Married','Self_Employed','Dependents','Property_Area']
+
+# Call fit to train the model on your data
+model.fit(df[predictor_var], df[outcome_var])
+
+# Call your classification_model function after fitting the model
+classification_model(model, df, predictor_var, outcome_var)
+
+#write_predict(model.predict(test_df[predictor_var]), test_df)
+
+# Data preprocessing
+from numpy.random import choice
+from sklearn.preprocessing import LabelEncoder
+def preprocess(df, is_test):   
+    draw = choice(["Yes","No"], 1, p=[0.14,0.86])[0]
+    df['Self_Employed'].fillna(draw,inplace=True)
+    df['LoanAmount'].fillna(df[df['LoanAmount'].isnull()].apply(fage, axis=1), inplace=True)
+    df['LoanAmount_log'] = np.log(df['LoanAmount'])
+    df['TotalIncome'] = df['ApplicantIncome'] + df['CoapplicantIncome']
+    df['TotalIncome_log'] = np.log(df['TotalIncome'])
+    term_list = df['Loan_Amount_Term'].value_counts().index.tolist()
+    term_mean = np.mean(term_list)
+    df['Loan_Amount_Term'].fillna(term_mean, inplace=True)
+    draw = choice([1,0], 1, p=[0.14,0.86])[0]
+    df['Credit_History'].fillna(1, inplace=True)
+    df['Dependents'].fillna(0, inplace=True)
+    draw = choice(["Yes","No"], 1, p=[0.66,0.34])[0]
+    df['Married'].fillna(draw,inplace=True)
+    draw = choice(["Male","Female"], 1, p=[0.82,0.18])[0]
+    df['Gender'].fillna(draw,inplace=True)    
+    if is_test:
+        var_mod = ['Gender','Married','Dependents','Education','Self_Employed','Property_Area']
+    else:
+        var_mod = ['Gender','Married','Dependents','Education','Self_Employed','Property_Area','Loan_Status']
+    le = LabelEncoder()
+    for i in var_mod:
+        df[i] = le.fit_transform(df[i].astype(str))
+        
+def write_predict(result, df):    
+    df["Loan_Status"] = ['Y' if x==1 else 'N' for x in result]
+    df.to_csv('./data/result.csv',columns=['Loan_ID','Loan_Status'],index=False)
+    
+# Test Set
+test_df = pd.read_csv("./data/test.csv") #Reading the dataset in a dataframe using Pandas
+preprocess(test_df,True)
+df = pd.read_csv("./data/train.csv") #Reading the dataset in a dataframe using Pandas
+preprocess(df, False)
+
+predictor_var = ['TotalIncome_log','LoanAmount_log','Credit_History','Property_Area']
+classification_model(model, df,predictor_var,outcome_var)
+write_predict(model.predict(test_df[predictor_var]), test_df)
+
+featimp = pd.Series(model.feature_importances_, index=predictor_var).sort_values(ascending=False)
+print(featimp)
+
+# Gradient Boosting
+model = GradientBoostingClassifier(n_estimators=100)
+predictor_var = ['Gender', 'Married', 'Dependents', 'Education',
+       'Self_Employed', 'Loan_Amount_Term', 'Credit_History', 'Property_Area',
+        'LoanAmount_log','TotalIncome_log']
+classification_model(model, df,predictor_var,outcome_var)
+write_predict(model.predict(test_df[predictor_var]), test_df)
+#With different loss function
+predictor_var = ['Self_Employed', 'Credit_History', 'Property_Area']
+model = GradientBoostingClassifier(n_estimators=10,loss='exponential')
+classification_model(model, df,predictor_var,outcome_var)
+write_predict(model.predict(test_df[predictor_var]), test_df)
+
+model = RandomForestClassifier(n_estimators=30,min_samples_split=15)
+predictor_var = ['TotalIncome_log','LoanAmount_log','Loan_Amount_Term','Credit_History','Property_Area']
+
+classification_model(model, df,predictor_var,outcome_var)
+write_predict(model.predict(test_df[predictor_var]), test_df)
